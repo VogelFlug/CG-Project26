@@ -6,11 +6,13 @@ import numpy as np
 def dilation(v_grid: np.ndarray, object: np.ndarray):
     # Run through each voxel in the grid. If the voxel does not hold a zero (i.e. is on the inside or border of the surface),
     # put the object's voxel grid on top of this one and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as one as well
+    # use np.argwhere to directly get indices of all voxels that are inside the object
     return
 
 def erosion(v_grid: np.ndarray, object: np.ndarray):
     # Run through each voxel in the grid. If the voxel does holds a zero put the object's voxel grid on top of this one
     # and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as zero 
+    # use np.argwhere to directly get indices of all voxels that are outside the object
     return
 
 def opening(v_grid: np.ndarray, object: np.ndarray):
