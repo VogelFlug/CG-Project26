@@ -20,21 +20,21 @@ def layover(l_grid: np.ndarray, s_grid: np.ndarray, l_center: np.ndarray):
     upshot   = s_center[1]
     backshot = s_center[2]
 
-    rightshot    = s_dims[0] - s_center[0] - 1
-    downshot     = s_dims[1] - s_center[1] - 1
+    rightshot = s_dims[0] - s_center[0] - 1
+    downshot  = s_dims[1] - s_center[1] - 1
     frontshot = s_dims[2] - s_center[2] - 1
 
     # Step three: check how much of our shot we are actually allowed in that direction
     l_dims = l_grid.shape
     leftshot = leftshot - max(0, leftshot - l_center[0])
-    upshot = upshot - max(0, leftshot - l_center[1])
+    upshot   = upshot - max(0, leftshot - l_center[1])
     backshot = backshot - max(0, backshot - l_center[2])
 
-    rightshot = rightshot + l_dims[0] - min(l_dims[0], rightshot + l_center[0])
-    downshot = downshot + l_dims[1] - min(l_dims[1], downshot + l_center[0])
-    frontshot = frontshot + l_dims[2] - min(l_dims[2], frontshot + l_center[0])
+    rightshot = rightshot + l_dims[0] - max(l_dims[0], rightshot + l_center[0])
+    downshot  = downshot + l_dims[1] - max(l_dims[1], downshot + l_center[0])
+    frontshot = frontshot + l_dims[2] - max(l_dims[2], frontshot + l_center[0])
 
-    return (leftshot, upshot, backshot, rightshot, downshot, frontshot)
+    return (leftshot, upshot, backshot, rightshot, downshot, frontshot),  s_grid[s_center[0]-leftshot:s_center[0]+rightshot+1, s_center[1]-upshot:s_center[1]+downshot+1, s_center[2]-backshot:s_center[2]+frontshot+1]
 
 
 def dilation(v_grid: np.ndarray, object: np.ndarray):
@@ -43,30 +43,44 @@ def dilation(v_grid: np.ndarray, object: np.ndarray):
 
     # use np.argwhere to directly get indices of all voxels that are inside the object
     indices = np.argwhere(v_grid > 0)
-    for i in range(indices[0]):
+    newgrid = v_grid.copy()
+    for i in range(indices.shape[0]):
         voxel = indices[i][0:3]
-        voxelvalue = v_grid[voxel]
-        print(voxel)
-        print(voxelvalue)
+        voxelvalue = v_grid[voxel[0],voxel[1],voxel[2]]
+        # now get the range that we need to check
+        (leftshot, upshot, backshot, rightshot, downshot, frontshot), tmp_object = layover(v_grid, object, voxel)
 
-        #now iterate over each element of our object 
-    return
+        #Finally: update each voxel in the range *if* the dilating object would "improve" the value
+        newgrid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1] = np.maximum(tmp_object*voxelvalue,  newgrid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1])
+    
+    return newgrid
 
 def erosion(v_grid: np.ndarray, object: np.ndarray):
     # Run through each voxel in the grid. If the voxel does holds a zero put the object's voxel grid on top of this one
     # and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as zero 
     # use np.argwhere to directly get indices of all voxels that are outside the object
-    return
+    indices = np.argwhere(v_grid == 0)
+    newgrid = v_grid.copy()
+    for i in range(indices.shape[0]):
+        voxel = indices[i][0:3]
+        voxelvalue = v_grid[voxel[0],voxel[1],voxel[2]]
+        # now get the range that we need to check
+        (leftshot, upshot, backshot, rightshot, downshot, frontshot), tmp_object = layover(v_grid, object, voxel)
+
+        #Finally: update each voxel in the range *if* the dilating object would "improve" the value
+        newgrid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1] = np.minimum(tmp_object*voxelvalue,  newgrid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1])
+    
+    return newgrid
 
 def opening(v_grid: np.ndarray, object: np.ndarray):
     # round out the corners on the inside
-    erosion(v_grid, object)
-    dilation(v_grid, object)
-    return
+    tmp1 = erosion(v_grid, object)
+    tmp2 = dilation(tmp1, object)
+    return tmp2
 
 def closing(v_grid: np.ndarray, object: np.ndarray):
     # Round out the corners on the outside (i.e. fill in the shape a bit)
-    dilation(v_grid, object)
-    erosion(v_grid, object)
-    return
+    tmp1 = dilation(v_grid, object)
+    tmp2 = erosion(tmp1, object)
+    return tmp2
 

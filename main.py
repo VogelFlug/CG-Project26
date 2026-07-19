@@ -1,7 +1,7 @@
 import dvx.torch as dvx
 import torch
 import numpy as np
-import morph_ops
+import morph_ops as mo
 import register as reg
 import trimesh
 import polyscope as ps
@@ -17,6 +17,22 @@ faces    = torch.from_numpy(f)
  
 occupancy = dvx.voxelize(64, vertices, faces)
 occ_np = occupancy.detach().numpy()
-reg.register_grid(occ_np)
-reg.register_as_point_clod(occ_np)
+# reg.register_grid(occ_np, "Original grid")
+reg.register_as_point_cloud(occ_np, "Original Grid cloud")
+
+small_obj = np.array([[[0,0,0],[0,1,0],[0,0,0]],[[0,1,0],[1,1,1],[0,1,0]],[[0,0,0],[0,1,0],[0,0,0]]])
+
+# reg.register_grid(small_obj, "Small object")
+
+dil_obj = mo.dilation(occ_np,small_obj)
+
+# reg.register_grid(mo.dilation(occ_np, small_obj), "Dilated grid")
+reg.register_as_point_cloud(dil_obj, "Dilated Grid cloud")
+
+
+ero_obj = mo.erosion(occ_np,small_obj)
+
+# reg.register_grid(mo.dilation(occ_np, small_obj), "Dilated grid")
+reg.register_as_point_cloud(ero_obj, "Eroded Grid cloud")
+
 ps.show()
