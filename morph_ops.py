@@ -31,15 +31,17 @@ def layover(l_grid: np.ndarray, s_grid: np.ndarray, l_center: np.ndarray):
     backshot = backshot - max(0, backshot - l_center[2])
 
     rightshot = rightshot + l_dims[0] - max(l_dims[0], rightshot + l_center[0])
-    downshot  = downshot + l_dims[1] - max(l_dims[1], downshot + l_center[0])
-    frontshot = frontshot + l_dims[2] - max(l_dims[2], frontshot + l_center[0])
+    downshot  = downshot + l_dims[1] - max(l_dims[1], downshot + l_center[1])
+    frontshot = frontshot + l_dims[2] - max(l_dims[2], frontshot + l_center[2])
 
     return (leftshot, upshot, backshot, rightshot, downshot, frontshot),  s_grid[s_center[0]-leftshot:s_center[0]+rightshot+1, s_center[1]-upshot:s_center[1]+downshot+1, s_center[2]-backshot:s_center[2]+frontshot+1]
 
 
 def dilation(v_grid: np.ndarray, object: np.ndarray):
     '''Run through each voxel in the grid. If the voxel does not hold a zero (i.e. is on the inside or border of the surface),
-    put the object's voxel grid on top of this one and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as one as well'''
+    put the object's voxel grid on top of this one and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as one as well
+    
+    Returns the dilated voxel grid'''
 
     # use np.argwhere to directly get indices of all voxels that are inside the object
     indices = np.argwhere(v_grid > 0)
@@ -56,8 +58,13 @@ def dilation(v_grid: np.ndarray, object: np.ndarray):
     return newgrid
 
 def erosion(v_grid: np.ndarray, object: np.ndarray):
-    # Run through each voxel in the grid. If the voxel does holds a zero put the object's voxel grid on top of this one
-    # and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as zero 
+    '''Run through each voxel in the grid. If the voxel does holds a zero put the object's voxel grid on top of this one
+    and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as zero
+
+    Returns the eroded Voxel grid 
+    
+    TODO: when on the edge, the matrices dont quite lineup, figure out why'''
+    
     # use np.argwhere to directly get indices of all voxels that are outside the object
     indices = np.argwhere(v_grid == 0)
     newgrid = v_grid.copy()
