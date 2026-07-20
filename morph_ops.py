@@ -81,13 +81,13 @@ def erosion(v_grid: np.ndarray, object: np.ndarray):
     return newgrid
 
 def opening(v_grid: np.ndarray, object: np.ndarray):
-    # round out the corners on the inside
+    '''Round out the corners from the inside '''
     tmp1 = erosion(v_grid, object)
     tmp2 = dilation(tmp1, object)
     return tmp2
 
 def closing(v_grid: np.ndarray, object: np.ndarray):
-    # Round out the corners on the outside (i.e. fill in the shape a bit)
+    '''Round out the corners from the outside (i.e. fill in the shape a bit)'''
     tmp1 = dilation(v_grid, object)
     tmp2 = erosion(tmp1, object)
     return tmp2

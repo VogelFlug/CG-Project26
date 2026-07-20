@@ -30,9 +30,20 @@ small_obj = np.array([[[0,0,0],[0,1,0],[0,0,0]],[[0,1,0],[1,1,1],[0,1,0]],[[0,0,
 # reg.register_as_point_cloud(dil_obj, "Dilated Grid cloud")
 
 
-ero_obj = mo.erosion(occ_np,small_obj)
+# ero_obj = mo.erosion(occ_np,small_obj)
 
-# reg.register_grid(mo.dilation(occ_np, small_obj), "Dilated grid")
-reg.register_as_point_cloud(ero_obj, "Eroded Grid cloud")
+# reg.register_grid(ero_obj, "Eroded grid")
+# reg.register_as_point_cloud(ero_obj, "Eroded Grid cloud")
+
+open_obj = mo.opening(occ_np,small_obj)
+
+reg.register_grid(open_obj, "Opened grid")
+reg.register_as_point_cloud(open_obj, "Opened Grid cloud")
+
+
+close_obj = mo.opening(occ_np,small_obj)
+
+reg.register_grid(close_obj, "Closed grid")
+reg.register_as_point_cloud(close_obj, "Closed Grid cloud")
 
 ps.show()
