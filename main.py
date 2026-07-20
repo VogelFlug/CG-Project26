@@ -18,11 +18,11 @@ vertices.requires_grad_(True)
 faces    = torch.from_numpy(f)
  
 occupancy = dvx.voxelize(64, vertices, faces)
-occ_np = np.where(occupancy.detach().numpy()>0.5, 1, 0)
+occ_np = occupancy.detach().numpy()
 # reg.register_grid(occ_np, "Original grid")
 reg.register_as_point_cloud(occ_np, "Original Grid cloud")
 
-tiny_sph = os.generate_sphere(3)
+tiny_sph = os.generate_sphere(2)
 
 # reg.register_grid(tiny_sph, "Small object")
 
@@ -43,7 +43,7 @@ reg.register_grid(open_obj, "Opened grid")
 reg.register_as_point_cloud(open_obj, "Opened Grid cloud")
 
 
-close_obj = mo.opening(occ_np,tiny_sph)
+close_obj = mo.closing(occ_np,tiny_sph)
 
 reg.register_grid(close_obj, "Closed grid")
 reg.register_as_point_cloud(close_obj, "Closed Grid cloud")

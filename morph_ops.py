@@ -56,6 +56,30 @@ def dilation(v_grid: np.ndarray, object: np.ndarray):
     
     return newgrid
 
+def alterosion(v_grid: np.ndarray, object: np.ndarray):
+    '''Run through each voxel in the grid. If the voxel does holds a zero put the object's voxel grid on top of this one
+    and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as zero
+
+    Returns the eroded Voxel grid'''
+    
+    # use np.argwhere to directly get indices of all voxels that are outside the object
+    indices = np.argwhere(v_grid < 1)
+    newgrid = v_grid.copy()
+    for i in range(indices.shape[0]):
+        voxel = indices[i][0:3]
+        voxelvalue = v_grid[voxel[0],voxel[1],voxel[2]]
+        # now get the range that we need to check
+        (leftshot, upshot, backshot, rightshot, downshot, frontshot), tmp_object = layover(v_grid, object, voxel)
+
+        # get the programm to ignore the dead voxels in our object
+        tmp_object = np.where(tmp_object == 0, 5, tmp_object)
+
+        #Finally: update each voxel in the range *if* the eroding object would "worsen" the value
+        newgrid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1] = np.minimum(tmp_object*voxelvalue,  newgrid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1])
+    
+    return newgrid
+
+
 def erosion(v_grid: np.ndarray, object: np.ndarray):
     '''Run through each voxel in the grid. If the voxel does holds a zero put the object's voxel grid on top of this one
     and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as zero
@@ -79,11 +103,14 @@ def erosion(v_grid: np.ndarray, object: np.ndarray):
 
         # Now we lay our object over our fakegrid and check if the object would "fit". If it does, let newgrid copy the original grid
         if(np.array_equal(np.bitwise_and(fakegrid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1], tmp_object), tmp_object)):
-            # to still semi maintain our border, if this is the case, let it only take the smallest value
+            # to still semi maintain our border, if this is the case, let it only take the smallest value that isnt 0
             snippet = v_grid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1] 
-            newgrid[voxel[0],voxel[1],voxel[2]] = v_grid[voxel[0], voxel[1], voxel[2]]
+            #newgrid[voxel[0],voxel[1],voxel[2]] = v_grid[voxel[0],voxel[1],voxel[2]]#np.min(np.where(snippet == 0, 5, snippet))
+            newgrid[voxel[0],voxel[1],voxel[2]] = np.min(np.where(snippet == 0, 5, snippet))
     
     return newgrid
+
+
 
 def opening(v_grid: np.ndarray, object: np.ndarray):
     '''Round out the corners from the inside '''
@@ -91,9 +118,14 @@ def opening(v_grid: np.ndarray, object: np.ndarray):
     tmp2 = dilation(tmp1, object)
     return tmp2
 
+
 def closing(v_grid: np.ndarray, object: np.ndarray):
     '''Round out the corners from the outside (i.e. fill in the shape a bit)'''
     tmp1 = dilation(v_grid, object)
     tmp2 = erosion(tmp1, object)
     return tmp2
+
+
+
+
 
