@@ -27,12 +27,12 @@ def layover(l_grid: np.ndarray, s_grid: np.ndarray, l_center: np.ndarray):
     # Step three: check how much of our shot we are actually allowed in that direction
     l_dims = l_grid.shape
     leftshot = leftshot - max(0, leftshot - l_center[0])
-    upshot   = upshot - max(0, leftshot - l_center[1])
+    upshot   = upshot - max(0, upshot - l_center[1])
     backshot = backshot - max(0, backshot - l_center[2])
 
-    rightshot = rightshot + l_dims[0] - max(l_dims[0], rightshot + l_center[0])
-    downshot  = downshot + l_dims[1] - max(l_dims[1], downshot + l_center[1])
-    frontshot = frontshot + l_dims[2] - max(l_dims[2], frontshot + l_center[2])
+    rightshot = rightshot + l_dims[0] - max(l_dims[0], rightshot + l_center[0] + 1)
+    downshot  = downshot + l_dims[1] - max(l_dims[1], downshot + l_center[1] + 1)
+    frontshot = frontshot + l_dims[2] - max(l_dims[2], frontshot + l_center[2] + 1)
 
     return (leftshot, upshot, backshot, rightshot, downshot, frontshot),  s_grid[s_center[0]-leftshot:s_center[0]+rightshot+1, s_center[1]-upshot:s_center[1]+downshot+1, s_center[2]-backshot:s_center[2]+frontshot+1]
 
@@ -61,12 +61,10 @@ def erosion(v_grid: np.ndarray, object: np.ndarray):
     '''Run through each voxel in the grid. If the voxel does holds a zero put the object's voxel grid on top of this one
     and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as zero
 
-    Returns the eroded Voxel grid 
-    
-    TODO: when on the edge, the matrices dont quite lineup, figure out why'''
+    Returns the eroded Voxel grid'''
     
     # use np.argwhere to directly get indices of all voxels that are outside the object
-    indices = np.argwhere(v_grid == 0)
+    indices = np.argwhere(v_grid < 1)
     newgrid = v_grid.copy()
     for i in range(indices.shape[0]):
         voxel = indices[i][0:3]
@@ -74,7 +72,10 @@ def erosion(v_grid: np.ndarray, object: np.ndarray):
         # now get the range that we need to check
         (leftshot, upshot, backshot, rightshot, downshot, frontshot), tmp_object = layover(v_grid, object, voxel)
 
-        #Finally: update each voxel in the range *if* the dilating object would "improve" the value
+        # get the programm to ignore the dead voxels in our object
+        tmp_object = np.where(tmp_object == 0, 5, tmp_object)
+
+        #Finally: update each voxel in the range *if* the eroding object would "worsen" the value
         newgrid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1] = np.minimum(tmp_object*voxelvalue,  newgrid[voxel[0]-leftshot:voxel[0]+rightshot+1, voxel[1]-upshot:voxel[1]+downshot+1, voxel[2]-backshot:voxel[2]+frontshot+1])
     
     return newgrid

@@ -24,10 +24,10 @@ small_obj = np.array([[[0,0,0],[0,1,0],[0,0,0]],[[0,1,0],[1,1,1],[0,1,0]],[[0,0,
 
 # reg.register_grid(small_obj, "Small object")
 
-dil_obj = mo.dilation(occ_np,small_obj)
+# dil_obj = mo.dilation(occ_np,small_obj)
 
 # reg.register_grid(mo.dilation(occ_np, small_obj), "Dilated grid")
-reg.register_as_point_cloud(dil_obj, "Dilated Grid cloud")
+# reg.register_as_point_cloud(dil_obj, "Dilated Grid cloud")
 
 
 ero_obj = mo.erosion(occ_np,small_obj)
