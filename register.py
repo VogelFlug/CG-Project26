@@ -1,6 +1,6 @@
-import dvx.torch as dvx
 import numpy as np
 import polyscope as ps
+import trimesh
 
 def register_grid(voxel_grid: np.ndarray, name: str):
     dims = voxel_grid.shape
@@ -31,3 +31,7 @@ def register_as_point_cloud(voxel_grid: np.ndarray, name: str):
         enabled=True
     )
 
+def register_mesh(name: str, mesh: trimesh.Trimesh):
+    v = np.array(mesh.vertices)
+    f = np.array(mesh.faces)
+    ps.register_surface_mesh(name, v, f)
