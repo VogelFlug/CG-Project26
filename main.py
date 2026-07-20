@@ -1,13 +1,15 @@
 import dvx.torch as dvx
 import torch
 import numpy as np
-import morph_ops as mo
-import register as reg
 import trimesh
 import polyscope as ps
 
+import objects.struct_elements as os
+import morph_ops as mo
+import register as reg
+
 ps.init()
-mesh = trimesh.load("bunny.obj")
+mesh = trimesh.load("objects/bunny.obj")
 v = np.array(mesh.vertices) # type: ignore
 f = np.array(mesh.faces) # type: ignore
 
@@ -20,28 +22,28 @@ occ_np = occupancy.detach().numpy()
 # reg.register_grid(occ_np, "Original grid")
 reg.register_as_point_cloud(occ_np, "Original Grid cloud")
 
-small_obj = np.array([[[0,0,0],[0,1,0],[0,0,0]],[[0,1,0],[1,1,1],[0,1,0]],[[0,0,0],[0,1,0],[0,0,0]]])
+tiny_sph = os.generate_sphere(2)
 
-# reg.register_grid(small_obj, "Small object")
+# reg.register_grid(tiny_sph, "Small object")
 
-# dil_obj = mo.dilation(occ_np,small_obj)
+dil_obj = mo.dilation(occ_np,tiny_sph)
 
-# reg.register_grid(mo.dilation(occ_np, small_obj), "Dilated grid")
-# reg.register_as_point_cloud(dil_obj, "Dilated Grid cloud")
+reg.register_grid(mo.dilation(occ_np, tiny_sph), "Dilated grid")
+reg.register_as_point_cloud(dil_obj, "Dilated Grid cloud")
 
 
-# ero_obj = mo.erosion(occ_np,small_obj)
+ero_obj = mo.erosion(occ_np,tiny_sph)
 
-# reg.register_grid(ero_obj, "Eroded grid")
-# reg.register_as_point_cloud(ero_obj, "Eroded Grid cloud")
+reg.register_grid(ero_obj, "Eroded grid")
+reg.register_as_point_cloud(ero_obj, "Eroded Grid cloud")
 
-open_obj = mo.opening(occ_np,small_obj)
+open_obj = mo.opening(occ_np,tiny_sph)
 
 reg.register_grid(open_obj, "Opened grid")
 reg.register_as_point_cloud(open_obj, "Opened Grid cloud")
 
 
-close_obj = mo.opening(occ_np,small_obj)
+close_obj = mo.opening(occ_np,tiny_sph)
 
 reg.register_grid(close_obj, "Closed grid")
 reg.register_as_point_cloud(close_obj, "Closed Grid cloud")
