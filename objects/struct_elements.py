@@ -1,5 +1,4 @@
-# This file includes a few structuring elements in the form of numpy arrays for the sake of testing.
-# These are all symmetrical and come in the form of sized grids, where 0 are not part of the element
+'''This file includes a few functions for creating symmetrical oddly-sized grids for structuring elements. All returns are numpy arrays'''
 import numpy as np
 
 tiny_sph = np.array([[[0,0,0],[0,1,0],[0,0,0]],[[0,1,0],[1,1,1],[0,1,0]],[[0,0,0],[0,1,0],[0,0,0]]])

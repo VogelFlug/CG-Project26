@@ -1,7 +1,6 @@
-import numpy as np
+'''A collection of functions for performing morphological operations on voxel grids'''
 
-# Define the "changing element" via a grid and then perform the actual operation by putting the element over each voxel in the actual voxel grid it is in. 
-# Probably very inefficient, but only needs to be done once before actual optimization so, eh, you win some you lose some
+import numpy as np
 
 def layover(l_grid: np.ndarray, s_grid: np.ndarray, l_center: np.ndarray):
     '''Given a large grid, a small grid and the coordinates of a point on the large grid: center the small grid on top of the point in the large grid #
@@ -57,8 +56,8 @@ def dilation(v_grid: np.ndarray, object: np.ndarray):
     return newgrid
 
 def alterosion(v_grid: np.ndarray, object: np.ndarray):
-    '''Run through each voxel in the grid. If the voxel does holds a zero put the object's voxel grid on top of this one
-    and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as zero
+    '''Run through each voxel in the grid. If the voxel holds a zero put the object's voxel grid on top of this one
+    and then check each voxel of the objects grid where its one (aka actually exists). Mark those voxels' equivalence in the full grid accordingly
 
     Returns the eroded Voxel grid'''
     
@@ -84,9 +83,7 @@ def erosion(v_grid: np.ndarray, object: np.ndarray):
     '''Run through each voxel in the grid. If the voxel does holds a zero put the object's voxel grid on top of this one
     and then check each voxel of the objects grid where its one. Mark their equivalence in the full grid as zero
 
-    Returns the eroded Voxel grid
-    
-    TODO: Something about this is wrong and i dont know what...'''
+    Returns the eroded Voxel grid'''
     
     # use np.argwhere to directly get indices of all voxels that are outside the object
     indices = np.argwhere(v_grid > 0)
