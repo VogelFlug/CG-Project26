@@ -3,7 +3,7 @@ import numpy as np
 import trimesh
 
 
-def get_cotanLap(mesh: trimesh.Trimesh):
+def get_cotanLap(mesh: trimesh.Trimesh) -> np.ndarray: 
     '''This function takes a mesh and returns the cotan Laplacian matrix, where each Cell ij is either:
      1: Falf of the sum of the cotan of the angles opposite to the edge ij if it exists and is on the inside of the surface of the mesh 
      2: The negative sum of the column i if i=j
@@ -21,7 +21,6 @@ def get_cotanLap(mesh: trimesh.Trimesh):
     for i,j in pairs:
         face_i = f[i]
         face_j = f[j]
-        print(v[face_i], v[face_j])
 
         # get index of vertices that are the odd ones out
         equalit = np.zeros((3,3))
@@ -54,3 +53,4 @@ def get_cotanLap(mesh: trimesh.Trimesh):
         lp_m[ri,ri] -= fin_sum
         lp_m[rj,rj] -= fin_sum
 
+    return lp_m
