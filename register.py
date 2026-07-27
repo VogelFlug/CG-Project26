@@ -12,17 +12,17 @@ def register_grid(voxel_grid: np.ndarray, name: str):
     ps_grid.add_scalar_quantity("node scalar1", voxel_grid, 
                                 defined_on='nodes', vminmax=(-1,1), enabled=True)
 
-def register_as_point_cloud(voxel_grid: np.ndarray, name: str):
-    # alternative form of showing the voxel grid that removes the voxels that shouldnt be there
+def register_as_point_cloud(voxel_grid: np.ndarray, name: str, scale = 0.02):
+    ''' alternative form of showing the voxel grid that removes the voxels that shouldnt be there. Scale scales the whole thing, as regularly it is far too big'''
 
     idx = np.argwhere(voxel_grid > 0)
     values = voxel_grid[idx[:,0], idx[:,1], idx[:,2]]
 
-    centers = idx.astype(float) + 0.5
+    centers = (idx.astype(float) + 0.5) * scale
     pc = ps.register_point_cloud(name, centers)
     pc.set_point_render_mode("quad")
 
-    pc.set_radius(0.5, relative=False)
+    pc.set_radius(0.5*scale, relative=False)
 
     pc.add_scalar_quantity(
         "value",
