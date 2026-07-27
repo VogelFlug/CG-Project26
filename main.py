@@ -11,7 +11,7 @@ import register as reg
 
 
 
-def morph_mesh(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step_size = 0.001, iterations = 1000):
+def morph_mesh(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step_size = 0.01, iterations = 200):
     '''An implementation of the main problem, which attempts to achieve dilation of the main mesh through the voxelization
     
     The current energy function is simply the Frobenius norm between the current voxelization and the goal
@@ -47,10 +47,19 @@ def morph_mesh(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, ste
     v_tens = torch.from_numpy(v)
     v_tens.requires_grad = True
     for i in range(iterations):
+        # Get the voxelization of the current set of vertices
         curr_occ = dvx.voxelize(64, v_tens, faces)
-        energy = torch.linalg.norm(curr_occ - goal_vox)
 
-        energy.backward()
+        # Main energy function: "Penalize" difference between current voxelization and goal voxelization 
+        mainenergy = torch.linalg.norm(curr_occ - goal_vox)
+
+        # Self intersection energy: the voxelization returns the winding number, if its larger than 1 or smaller than 0, the mesh intersects itself, and we dont want that
+        # has an epsilon due to floating point stuff
+        si = torch.where((curr_occ < -1e-6) | (curr_occ > 1 + 1e-6), curr_occ, 0)
+        si_energy = torch.linalg.norm(si)
+
+        fullenergy = 1.2 * si_energy + mainenergy
+        fullenergy.backward()
     
         with torch.no_grad():
             if(v_tens.grad == None):
@@ -67,11 +76,10 @@ def morph_mesh(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, ste
 if __name__ == '__main__':
     mesh = trimesh.load_mesh("objects/bunny.obj")
     mesh.merge_vertices()
-
     ps.init()
     ps_mesh = reg.register_mesh("OG Mesh", mesh)
 
-    operations = ["dilate", "erode", "close", "open"]
+    operations = ["dilate"] #"erode", "close", "open"
 
     #Create the structuring element
     s_el = os.generate_sphere(2)
