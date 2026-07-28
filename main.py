@@ -41,6 +41,7 @@ def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step
     # Get goal voxelization, depends on the four modes:
     if(mode == "dilate"):
         goal_vox = torch.from_numpy(mo.dilation(occ_np, struct_element))
+        reg.register_as_point_cloud(occ_np, "Base Mesh grid")
         reg.register_as_point_cloud(goal_vox.numpy(), "Goal Dilation")
     elif(mode == "erode"):
         goal_vox = torch.from_numpy(mo.erosion(occ_np, struct_element))
@@ -82,10 +83,10 @@ def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step
 
             # Self intersection energy: the voxelization returns the winding number, if its larger than 1 or smaller than 0, the mesh intersects itself, and we dont want that
             # has an epsilon due to floating point stuff
-            si = torch.where((curr_occ < -1e-6) | (curr_occ > 1 + 1e-6), curr_occ, 0)
-            si_energy = torch.linalg.norm(si)
+            # si = torch.where((curr_occ < -1e-6) | (curr_occ > 1 + 1e-6), curr_occ, 0)
+            # si_energy = torch.linalg.norm(si)
 
-            fullenergy = si_energy + mainenergy
+            fullenergy =  mainenergy
             fullenergy.backward()
         
             with torch.no_grad():
@@ -112,10 +113,10 @@ def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step
     
             # Self intersection energy: the voxelization returns the winding number, if its larger than 1 or smaller than 0, the mesh intersects itself, and we dont want that
             # has an epsilon due to floating point stuff
-            si = torch.where((curr_occ < -1e-6) | (curr_occ > 1 + 1e-6), curr_occ, 0)
-            si_energy = si.pow(2).sum()
+            # si = torch.where((curr_occ < -1e-6) | (curr_occ > 1 + 1e-6), curr_occ, 0)
+            # si_energy = si.pow(2).sum()
     
-            fullenergy = si_energy + mainenergy
+            fullenergy = mainenergy
             fullenergy.backward()
         
             optimizer.step()
@@ -124,6 +125,7 @@ def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step
                     raise Exception("No gradient was calculated, something went wrong")   
             u.grad.zero_()
 
+    print(fullenergy)
     v_tens = torch.inverse(weigher) @ u
     return v_tens.cpu().detach().numpy(), faces.cpu().numpy()
 
@@ -254,13 +256,16 @@ if __name__ == '__main__':
     ps.init()
     ps_mesh = reg.register_mesh("OG Mesh", mesh)
 
-    operations = ["dilate","erode", "close", "open"]
+    operations = ["dilate"]#,"erode", "close", "open"]
 
     #Create the structuring element
     s_el = os.generate_sphere(2)
 
     for op in operations:
         v,f = morph_lap(mesh, s_el, op, adam=True)
+        ps.register_surface_mesh(op + "Adam Result", v, f)
+
+        v,f = morph_lap(mesh, s_el, op, adam=False)
 
         # visualize the result of the current morphological operation
         ps.register_surface_mesh(op + " Result", v, f)
