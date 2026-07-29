@@ -9,38 +9,42 @@ import morph_ops as mo
 import register as reg
 
 ps.init()
-mesh = trimesh.load("objects/bunny.obj")
-v = np.array(mesh.vertices) # type: ignore
-f = np.array(mesh.faces) # type: ignore
+mesh = trimesh.load_mesh("objects/for_the_buird.obj", process = False)
+mesh.merge_vertices( merge_tex=True,merge_norm=True)
+v = np.array(mesh.vertices) 
+v = v /5.5
+f = np.array(mesh.faces) 
 
+reg.register_mesh( "Blue's work", mesh)
 vertices = torch.from_numpy(v)
 vertices.requires_grad_(True)
 faces    = torch.from_numpy(f)
  
-occupancy = dvx.voxelize(64, vertices, faces)
+occupancy = dvx.voxelize(128, vertices, faces)
 occ_np = occupancy.detach().numpy()
 # reg.register_grid(occ_np, "Original grid")
 reg.register_as_point_cloud(occ_np, "Original Grid cloud")
+reg.register_grid(occ_np, "Original Grid")
 
-tiny_sph = os.generate_sphere(2)
+tiny_sph = os.generate_sphere(10)
 
 # reg.register_grid(tiny_sph, "Small object")
 
-dil_obj = mo.dilation(occ_np,tiny_sph)
+# dil_obj = mo.dilation(occ_np,tiny_sph)
 
-reg.register_grid(mo.dilation(occ_np, tiny_sph), "Dilated grid")
-reg.register_as_point_cloud(dil_obj, "Dilated Grid cloud")
+# reg.register_grid(mo.dilation(occ_np, tiny_sph), "Dilated grid")
+# reg.register_as_point_cloud(dil_obj, "Dilated Grid cloud")
 
 
-ero_obj = mo.erosion(occ_np,tiny_sph)
+# ero_obj = mo.erosion(occ_np,tiny_sph)
 
-reg.register_grid(ero_obj, "Eroded grid")
-reg.register_as_point_cloud(ero_obj, "Eroded Grid cloud")
+# reg.register_grid(ero_obj, "Eroded grid")
+# reg.register_as_point_cloud(ero_obj, "Eroded Grid cloud")
 
-open_obj = mo.opening(occ_np,tiny_sph)
+# open_obj = mo.opening(occ_np,tiny_sph)
 
-reg.register_grid(open_obj, "Opened grid")
-reg.register_as_point_cloud(open_obj, "Opened Grid cloud")
+# reg.register_grid(open_obj, "Opened grid")
+# reg.register_as_point_cloud(open_obj, "Opened Grid cloud")
 
 
 close_obj = mo.closing(occ_np,tiny_sph)

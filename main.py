@@ -3,6 +3,8 @@ import torch
 import numpy as np
 import trimesh
 import polyscope as ps
+from largesteps.geometry import laplacian_uniform, compute_matrix
+from largesteps.parameterize import to_differential, from_differential
 
 import objects.struct_elements as os
 import morph_ops as mo
@@ -11,7 +13,7 @@ import util
 
 
 
-def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step_size = 0.002, iterations = 100, adam = False, hyper = 0.01):
+def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step_size = 0.002, iterations = 500, adam = False, hyper = 1):
     '''An implementation of the main problem, which additionally implements the modifier to the step via the Laplacian matrix as seen in 
     "Large Steps in Inverse Rendering of Geometry [Nicolet et al. 2021]
     
@@ -28,7 +30,7 @@ def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step
     hyper is the value for how much the Laplacian weighs into the full solution'''
 
 
-    v = np.array(mesh.vertices)
+    v = np.array(mesh.vertices, dtype=np.float32)
     f = np.array(mesh.faces)
 
     vertices = torch.from_numpy(v).clone()
@@ -45,13 +47,13 @@ def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step
         reg.register_as_point_cloud(goal_vox.numpy(), "Goal Dilation")
     elif(mode == "erode"):
         goal_vox = torch.from_numpy(mo.erosion(occ_np, struct_element))
-        #reg.register_as_point_cloud(goal_vox.numpy(), "Goal Erosion")
+        reg.register_as_point_cloud(goal_vox.numpy(), "Goal Erosion")
     elif(mode == "close"):
         goal_vox = torch.from_numpy(mo.closing(occ_np, struct_element))
-        #reg.register_as_point_cloud(goal_vox.numpy(), "Goal Closing")
+        reg.register_as_point_cloud(goal_vox.numpy(), "Goal Closing")
     elif(mode == "open"):
         goal_vox = torch.from_numpy(mo.opening(occ_np, struct_element))
-        #reg.register_as_point_cloud(goal_vox.numpy(), "Goal Opening")
+        reg.register_as_point_cloud(goal_vox.numpy(), "Goal Opening")
     else:
         raise Exception(mode + " is not a recognitiion of a morphological operation, maybe check your spelling?")
     
@@ -60,20 +62,19 @@ def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step
     goal_vox = goal_vox.to(device)
     faces = faces.to(device)
 
-    # get the cotan Laplacian and the subsequent weighing
-    lap = util.get_cotanLap(mesh)
-    weigher = torch.from_numpy(np.identity(lap.shape[0]) + (hyper * lap)).to(device)
 
-    # We won't actually be optimising through the vertices, we'll be optimising through the "weighed" vertices
     v_tens = torch.from_numpy(v).to(device)
-    u = weigher @ v_tens
-    u.requires_grad = True
+    # get the Laplacian and the subsequent weighing
+    M = compute_matrix(v_tens, faces, lambda_=hyper).to_sparse()
+    # We won't actually be optimising through the vertices, we'll be optimising through the "weighed" vertices
+    u = to_differential(M, v_tens)
 
     # Toggle between Adam or not
     if(adam == False):
+        u.requires_grad = True
         for i in range(iterations):
             # First, we get back to the actual vertices
-            v_tens = torch.inverse(weigher) @ u
+            v_tens = from_differential(M, u, method='Cholesky')
 
             # Get the voxelization of the current set of vertices
             curr_occ = dvx.voxelize(128, v_tens, faces)
@@ -104,7 +105,7 @@ def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step
     
         for i in range(iterations):
             # First, we get back to the actual vertices
-            v_tens = torch.inverse(weigher) @ u
+            v_tens = from_differential(M, u, method='Cholesky')
             # Get the voxelization of the current set of vertices
             curr_occ = dvx.voxelize(128, v_tens, faces)
     
@@ -126,7 +127,7 @@ def morph_lap(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, step
             u.grad.zero_()
 
     print(fullenergy)
-    v_tens = torch.inverse(weigher) @ u
+    v_tens = from_differential(M, u, method='Cholesky')
     return v_tens.cpu().detach().numpy(), faces.cpu().numpy()
 
 
@@ -164,16 +165,17 @@ def morph_mesh(mesh: trimesh.Trimesh, struct_element: np.ndarray, mode: str, ste
     # Get goal voxelization, depends on the four modes:
     if(mode == "dilate"):
         goal_vox = torch.from_numpy(mo.dilation(occ_np, struct_element))
+        reg.register_as_point_cloud(occ_np, "Base")
         reg.register_as_point_cloud(goal_vox.numpy(), "Goal Dilation")
     elif(mode == "erode"):
         goal_vox = torch.from_numpy(mo.erosion(occ_np, struct_element))
-        #reg.register_as_point_cloud(goal_vox.numpy(), "Goal Erosion")
+        reg.register_as_point_cloud(goal_vox.numpy(), "Goal Erosion")
     elif(mode == "close"):
         goal_vox = torch.from_numpy(mo.closing(occ_np, struct_element))
-        #reg.register_as_point_cloud(goal_vox.numpy(), "Goal Closing")
+        reg.register_as_point_cloud(goal_vox.numpy(), "Goal Closing")
     elif(mode == "open"):
         goal_vox = torch.from_numpy(mo.opening(occ_np, struct_element))
-        #reg.register_as_point_cloud(goal_vox.numpy(), "Goal Opening")
+        reg.register_as_point_cloud(goal_vox.numpy(), "Goal Opening")
     else:
         raise Exception(mode + " is not a recognitiion of a morphological operation, maybe check your spelling?")
 
@@ -256,18 +258,19 @@ if __name__ == '__main__':
     ps.init()
     ps_mesh = reg.register_mesh("OG Mesh", mesh)
 
-    operations = ["dilate"]#,"erode", "close", "open"]
+    operations = ["erode"]#["dilate","erode", "close", "open"]
 
     #Create the structuring element
-    s_el = os.generate_sphere(2)
+    s_el = os.generate_sphere(3)
 
     for op in operations:
-        v,f = morph_lap(mesh, s_el, op, adam=True)
-        ps.register_surface_mesh(op + "Adam Result", v, f)
-
+        
         v,f = morph_lap(mesh, s_el, op, adam=False)
 
         # visualize the result of the current morphological operation
         ps.register_surface_mesh(op + " Result", v, f)
+        v,f = morph_lap(mesh, s_el, op, adam=True)
+        ps.register_surface_mesh(op + "Adam Result", v, f)
+
 
     ps.show()
